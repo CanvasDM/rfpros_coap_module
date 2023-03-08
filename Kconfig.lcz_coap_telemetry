@@ -1,0 +1,58 @@
+# Copyright (c) 2020-2023 Laird Connectivity
+# SPDX-License-Identifier: LicenseRef-LairdConnectivity-Clause
+
+config LCZ_COAP_TELEMETRY
+	bool "Support Telemetry using Laird Connectivity CoAP Bridge"
+	select COAP
+	depends on ATTR
+	depends on LCZ_DNS
+	depends on LCZ_QRTC
+	depends on DNS_RESOLVER
+	depends on NET_SOCKETS
+	depends on NET_SOCKETS_ENABLE_DTLS
+	depends on REBOOT
+	depends on NETWORKING
+
+if LCZ_COAP_TELEMETRY
+
+config LCZ_COAP_TELEMETRY_DEFAULT_PORT
+	int "Default port CoAP telemetry data"
+	default 5684
+
+config LCZ_COAP_TELEMETRY_MAX_REQUEST_SIZE
+	int "Maximum CoAP TELEMETRY request size"
+	default 1024
+
+config LCZ_COAP_TELEMETRY_MAX_RESPONSE_SIZE
+	int "Maximum CoAP TELEMETRY response size"
+	default 1024
+	help
+	  This must be larger than the block size and header and
+	  the size of any response message.
+
+config LCZ_COAP_TELEMETRY_MAX_BLOCK_SIZE
+	int "Maximum payload size (enumeration) for block-wise transfers"
+	range 0 6
+	default 6
+	help
+	  0 is 16, 32, 64, 128, 256, 512, 6 is 1024
+
+config LCZ_COAP_TELEMETRY_HEXDUMP
+	bool "Dump Hex Rx/Tx messages"
+
+config LCZ_COAP_TELEMETRY_LOG_LEVEL
+	int "Log level for CoAP Telemetry"
+	range 0 4
+	default 3
+
+config LCZ_COAP_TELEMETRY_RESPONSE_TIMEOUT_MS
+	int "The amount of time to wait for a response from the CoAP bridge"
+	default 4000
+
+config LCZ_COAP_TELEMETRY_CLIENT_TAG
+	int "Tag used by TLS for referencing device (CoAP client) credentials"
+	default 124
+	help
+	  Should be unique in the system.
+
+endif # LCZ_COAP_TELEMETRY

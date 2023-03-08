@@ -1,0 +1,16 @@
+# Copyright (c) 2020-2023 Laird Connectivity
+# SPDX-License-Identifier: LicenseRef-LairdConnectivity-Clause
+
+config LCZ_COAP_SOCK
+	bool "Wrapper for single socket"
+	depends on ATTR
+	depends on NET_SOCKETS
+	depends on MBEDTLS_DTLS
+
+config LCZ_COAP_SOCK_VERBOSE_POLL
+	bool "Enable verbose logging for poll timeouts and wait complete"
+	depends on LCZ_COAP_SOCK
+
+config LCZ_COAP_SOCK_TIMING
+	bool "Enable verbose logging for poll timeouts and wait complete"
+	depends on LCZ_COAP_SOCK

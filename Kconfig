@@ -1,0 +1,5 @@
+# Copyright (c) 2022 Laird Connectivity
+# SPDX-License-Identifier: LicenseRef-LairdConnectivity-Clause
+
+rsource "Kconfig.lcz_coap_sock"
+rsource "Kconfig.lcz_coap_telemetry"

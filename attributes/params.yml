@@ -1,0 +1,84 @@
+---
+info:
+  title: lcz_coap_attributes
+attributes:
+  - name: coap_telemetry_endpoint
+    summary: Coap server endpoint to connect to
+    required: true
+    schema:
+      maxLength: 255
+      minLength: 11 # coap://1.io
+      type: string
+    x-ctype: string
+    x-broadcast: true
+    x-default: canvas-coap-proxy-dev.salticidae.net
+    x-prepare: false
+    x-readable: true
+    x-savable: true
+    x-writable: true    
+  - name: coap_telemetry_proxy_srv
+    summary: Proxy Server to connect to
+    required: true
+    schema:
+      maxLength: 255
+      minLength: 11 # coap://1.io
+      type: string
+    x-ctype: string
+    x-broadcast: true
+    x-default: http://service.http-proxy:8080
+    x-prepare: false
+    x-readable: true
+    x-savable: true
+    x-writable: true
+  - name: coap_telemetry_security
+    summary: "coap_telemetry Security mode"
+    required: true
+    schema:
+      maximum: 4
+      minimum: 0
+      type: integer
+      enum:
+        PSK: 0
+        RPK: 1
+        CERT: 2
+        NO_SEC: 3
+        CERT_EST: 4
+    x-ctype: uint8_t
+    x-broadcast: true
+    x-default: 2
+    x-example: 0
+    x-prepare: false
+    x-readable: true
+    x-savable: true
+    x-writable: true
+  - name: coap_telemetry_psk_id
+    summary: PSK ID
+    required: true
+    schema:
+      maxLength: 256
+      minLength: 1
+      type: string
+    x-ctype: string
+    x-broadcast: true
+    x-default: my_device
+    x-prepare: false
+    x-readable: true
+    x-savable: true
+    x-writable: true
+  - name: coap_telemetry_psk
+    summary: Pre-shared key
+    required: true
+    schema:
+      maxItems: 32
+      minItems: 32
+      type: array
+    x-ctype: uint8_t
+    x-broadcast: true
+    x-array-size: 32
+    x-default: "{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f }"
+    x-prepare: false
+    x-readable: false
+    x-savable: true
+    x-writable: true
+    x-obscure-in-show: true
+    
