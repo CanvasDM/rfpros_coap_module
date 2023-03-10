@@ -3,7 +3,7 @@ info:
   title: lcz_coap_attributes
 attributes:
   - name: coap_telemetry_endpoint
-    summary: Coap server endpoint to connect to
+    summary: Coap server endpoint to connect to (do not include https://)
     required: true
     schema:
       maxLength: 255
@@ -17,11 +17,11 @@ attributes:
     x-savable: true
     x-writable: true    
   - name: coap_telemetry_proxy_srv
-    summary: Proxy Server to connect to
+    summary: Proxy Server to connect to (needs to include http://)
     required: true
     schema:
       maxLength: 255
-      minLength: 11 # coap://1.io
+      minLength: 0
       type: string
     x-ctype: string
     x-broadcast: true

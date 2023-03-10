@@ -46,13 +46,10 @@ typedef struct lcz_coap_telemetry_query {
 	char proxy_url[CONFIG_COAP_EXTENDED_OPTIONS_LEN_VALUE];
 	bool peer_verify;
 	bool hostname_verify;
+	bool imm_close;
 	uint8_t *pData;
 	uint16_t dataLen;   
     
-	/* response data - set by coap query size */
-	int32_t last_coll_time;
-	uint32_t last_coll_dev;
-
 } lcz_coap_telemetry_query_t;
 
 struct lcz_coap_user {
@@ -82,6 +79,12 @@ void lcz_coap_register_user(struct lcz_coap_user *user);
  *
  */
 int lcz_coap_telemetry_post(lcz_coap_telemetry_query_t *p);
+
+/**
+ * @brief Close coap telemetry socket
+ *
+ */
+void lcz_coap_telemetry_close(void);
 
 /**
  * @brief Reset CoAP credentials (will be reloaded on next transfer)

@@ -107,7 +107,7 @@ static void issue_rx_callback(lcz_coap_telemetry_query_t *pReq, const uint8_t *p
 			      uint16_t replyPayloadLength);
 static void coap_hexdump(const uint8_t *str, const uint8_t *packet,
 			 size_t length);
-static void coap_stop_client(void);
+static void coap_stop_client(lcz_coap_telemetry_query_t *p);
 static int coap_load_cred(void);
 static int coap_start_client(lcz_coap_telemetry_query_t *p);
 
@@ -176,8 +176,15 @@ int lcz_coap_telemetry_post(lcz_coap_telemetry_query_t *p)
 		break;
 	}
 
-	(void)coap_stop_client();
+	(void)coap_stop_client(p);
 	return r;
+}
+
+void lcz_coap_telemetry_close(void)
+{
+	if (lcz_coap_sock_valid(&cf.sock_info)) {
+		lcz_coap_sock_close(&cf.sock_info);
+	}
 }
 
 void lcz_coap_telemetry_reset_creds(void)
@@ -192,10 +199,6 @@ int lcz_coap_certs_unload(void)
 
 	lcz_pki_auth_tls_credential_unload(LCZ_PKI_AUTH_STORE_TELEMETRY,
 					   CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG);
-
-	if(psk) {
-		k_free(psk);
-	}
 
 	return 0;
 }
@@ -239,8 +242,14 @@ static int process_coap_reply(lcz_coap_telemetry_query_t *p)
 					r2 = lcz_coap_sock_send(&cf.sock_info,
 							  cf.request.data,
 							  cf.request.offset, 0);
+					if(r2 < 0) {
+						LOG_ERR("Error sending Ack for received Con (%d), close socket", r2);
+						//Send error, close socket
+						lcz_coap_sock_close(&cf.sock_info);
+					} else {
+						LOG_DBG("Sent Ack for received Con (%d)", r2);
+					}
 				}
-				LOG_DBG("Sent Ack for received Con (%d)", r2);
 			} else {
 				LOG_DBG("RX unknown type %d", type);
 			}
@@ -289,9 +298,11 @@ if	 (packet == NULL) {
 #endif
 }
 
-static void coap_stop_client(void)
+static void coap_stop_client(lcz_coap_telemetry_query_t *p)
 {
-	lcz_coap_sock_close(&cf.sock_info);
+	if(p->imm_close) {
+		lcz_coap_sock_close(&cf.sock_info);
+	}
 	
 	int ret = GIVE_MUTEX(lcz_coap_tx_mutex);
 	LOG_DBG("Give coap mutex %s, %d", k_thread_name_get(k_current_get()), ret);
@@ -310,41 +321,31 @@ static int coap_load_cred(void)
 		attr_get_uint32(ATTR_ID_coap_telemetry_security, COAP_TELEMETRY_SECURITY_CERT);
 
 	if (security == COAP_TELEMETRY_SECURITY_PSK) {
-		if(psk == NULL) {
-			psk = k_malloc(MBEDTLS_PSK_MAX_LEN);
+		psk_id = (char *)attr_get_quasi_static(ATTR_ID_coap_telemetry_psk_id);
+		psk = (uint8_t *)attr_get_quasi_static(ATTR_ID_coap_telemetry_psk);
+
+		/* ignore error value */
+		tls_credential_delete(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK_ID);
+
+		LOG_INF("Loading CoAP Telemetry PSK ID and PSK");
+		r = tls_credential_add(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK_ID,
+					psk_id, strlen(psk_id));
+		if (r < 0) {
+			LOG_ERR("Failed to add %s: %d", "psk id", r);
+			return r;
 		}
 
-		if(psk) {
-			psk_id = (char *)attr_get_quasi_static(ATTR_ID_coap_telemetry_psk_id);
-			attr_get(ATTR_ID_coap_telemetry_psk, psk, sizeof(psk));
+		/* ignore error value */
+		tls_credential_delete(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK);
 
-			/* ignore error value */
-			tls_credential_delete(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK_ID);
-
-			LOG_INF("Loading CoAP Telemetry PSK ID and PSK");
-			r = tls_credential_add(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK_ID,
-						psk_id, strlen(psk_id));
-			if (r < 0) {
-				LOG_ERR("Failed to add %s: %d", "psk id", r);
-				return r;
-			}
-
-			/* ignore error value */
-			tls_credential_delete(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK);
-
-			// LOG_HEXDUMP_DBG(psk, 32, "Loading CoAP Telemetry PSK");
-			r = tls_credential_add(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK, psk,
-						sizeof(psk));
-			if (r < 0) {
-				LOG_ERR("Failed to add %s: %d", "psk", r);
-				return r;
-			}
-		} else {
-			r = -ENOMEM;
+		r = tls_credential_add(CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG, TLS_CREDENTIAL_PSK, psk,
+					MBEDTLS_PSK_MAX_LEN);
+		if (r < 0) {
+			LOG_ERR("Failed to add %s: %d", "psk", r);
+			return r;
 		}
 	} else if (security == COAP_TELEMETRY_SECURITY_CERT) {
 		LOG_INF("Loading CoAP Telemetry certificates");
-		// use telemetry certs (hydrantid) once enabled by coap server
 		r = lcz_pki_auth_tls_credential_load(LCZ_PKI_AUTH_STORE_TELEMETRY,
 		CONFIG_LCZ_COAP_TELEMETRY_CLIENT_TAG,
 		false);
@@ -386,7 +387,9 @@ static int coap_start_client(lcz_coap_telemetry_query_t *p)
 	r = coap_addr(&addr, p->domain, p->port);
 	if (r >= 0) {
 		r = lcz_coap_sock_udp_start(&cf.sock_info, &addr, p->hostname_verify, p->domain, p->peer_verify);
-		if(r == 0){
+		if(r == 0 || r == -EALREADY) {
+			//UDP socket connected or is already connected indicates success
+			r = 0;
 		} else {
 #ifndef CONFIG_LCZ_BLE_GW_DM_DEVICE_MANAGEMENT_STATUS_LED
 			//if DM task is not controlling LED, then application can
@@ -469,6 +472,11 @@ static int send_post(lcz_coap_telemetry_query_t *p)
 
 		r = lcz_coap_sock_send(&cf.sock_info, cf.request.data,
 				  cf.request.offset, 0);
+		if(r < 0) {			
+			LOG_ERR("Error sending post (%d), close socket.", r);
+			//Send error, close socket
+			lcz_coap_sock_close(&cf.sock_info);
+		}
 		BREAK_ON_ERROR(r);
 		break;
 	}

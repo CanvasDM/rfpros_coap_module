@@ -122,7 +122,7 @@ int lcz_coap_sock_wait(sock_info_t *p, int timeout)
 
 static void filter_cipher_list(int fd)
 {
-	int input_cipher_list[CONFIG_NET_SOCKETS_TLS_MAX_CIPHERSUITES];
+	int input_cipher_list[CONFIG_LWM2M_TLS_MAX_CIPHERSUITES];
 	int output_cipher_list[CONFIG_NET_SOCKETS_TLS_MAX_CIPHERSUITES - 1];
 	uint32_t in_list_len = sizeof(input_cipher_list);
 	uint32_t out_list_len = 0;
@@ -141,7 +141,7 @@ static void filter_cipher_list(int fd)
 		}
 
 		/* Copy PSK ciphers into the output list */
-		LOG_DBG("Found %d ciphers", in_list_len);
+		LOG_DBG("Found %d ciphers", in_list_len / sizeof(int));
 		for (i = 0; (i < (in_list_len / sizeof(int))) &&
 				(out_list_len < (CONFIG_NET_SOCKETS_TLS_MAX_CIPHERSUITES - 1));
 			 i++) {
@@ -174,8 +174,8 @@ int lcz_coap_sock_udp_start(sock_info_t *p, struct sockaddr *addr, bool hostname
 	}
 
 	if (lcz_coap_sock_valid(p)) {
-		LOG_ERR("Sock already open");
-		return -EPERM;
+		LOG_DBG("Sock already open");
+		return -EALREADY;
 	}
 
 	int status = -EPERM;
